@@ -51,7 +51,7 @@ pip install 'vision-parse[all]'
 **Install the package from source:**
 
 ```bash
-pip install 'git+https://github.com/iamarunbrahma/vision-parse.git#egg=vision-parse[all]'
+pip install 'git+https://github.com/aldopareja/vision-parse.git#egg=vision-parse[all]'
 ```
 
 ### Setting up Ollama (Optional)
