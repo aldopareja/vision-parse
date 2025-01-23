@@ -446,80 +446,80 @@ class LLM:
         except Exception as e:
             raise LLMError(f"Ollama Model processing failed: {str(e)}")
 
-@retry(
-    reraise=True,
-    stop=stop_after_attempt(3),
-    wait=wait_exponential(multiplier=1, min=4, max=10),
-)
-async def _openai(
-    self, base64_encoded: str, prompt: str, structured: bool = False
-) -> Any:
-    """Process base64-encoded image through OpenAI vision models."""
-    try:
-        messages = [
-            {
-                "role": "user", 
-                "content": [
-                    {"type": "text", "text": prompt},
-                    {
-                        "type": "image_url",
-                        "image_url": {
-                            "url": f"data:image/png;base64,{base64_encoded}"
+    @retry(
+        reraise=True,
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=4, max=10),
+    )
+    async def _openai(
+        self, base64_encoded: str, prompt: str, structured: bool = False
+    ) -> Any:
+        """Process base64-encoded image through OpenAI vision models."""
+        try:
+            messages = [
+                {
+                    "role": "user", 
+                    "content": [
+                        {"type": "text", "text": prompt},
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:image/png;base64,{base64_encoded}"
+                            },
                         },
-                    },
-                ],
-            }
-        ]
-
-        if self.enable_concurrency:
-            if structured:
-                # Remove JSON formatting but keep structured prompt
-                response = await self.aclient.chat.completions.create(
-                    model=self.model_name,
-                    messages=messages,
-                    temperature=0.0,
-                    top_p=0.4,
-                    stream=False,
-                    **self.kwargs,
-                )
+                    ],
+                }
+            ]
+    
+            if self.enable_concurrency:
+                if structured:
+                    # Remove JSON formatting but keep structured prompt
+                    response = await self.aclient.chat.completions.create(
+                        model=self.model_name,
+                        messages=messages,
+                        temperature=0.0,
+                        top_p=0.4,
+                        stream=False,
+                        **self.kwargs,
+                    )
+                else:
+                    response = await self.aclient.chat.completions.create(
+                        model=self.model_name,
+                        messages=messages,
+                        temperature=self.temperature,
+                        top_p=self.top_p,
+                        stream=False,
+                        **self.kwargs,
+                    )
             else:
-                response = await self.aclient.chat.completions.create(
-                    model=self.model_name,
-                    messages=messages,
-                    temperature=self.temperature,
-                    top_p=self.top_p,
-                    stream=False,
-                    **self.kwargs,
-                )
-        else:
-            if structured:
-                # Remove JSON formatting but keep structured prompt
-                response = self.client.chat.completions.create(
-                    model=self.model_name,
-                    messages=messages,
-                    temperature=0.0,
-                    top_p=0.4,
-                    stream=False,
-                    **self.kwargs,
-                )
-            else:
-                response = self.client.chat.completions.create(
-                    model=self.model_name,
-                    messages=messages,
-                    temperature=self.temperature,
-                    top_p=self.top_p,
-                    stream=False,
-                    **self.kwargs,
-                )
-
-        return re.sub(
-            r"```(?:markdown)?\n(.*?)\n```",
-            r"\1",
-            response.choices[0].message.content,
-            flags=re.DOTALL,
-        )
-    except Exception as e:
-        raise LLMError(f"OpenAI Model processing failed: {str(e)}")
+                if structured:
+                    # Remove JSON formatting but keep structured prompt
+                    response = self.client.chat.completions.create(
+                        model=self.model_name,
+                        messages=messages,
+                        temperature=0.0,
+                        top_p=0.4,
+                        stream=False,
+                        **self.kwargs,
+                    )
+                else:
+                    response = self.client.chat.completions.create(
+                        model=self.model_name,
+                        messages=messages,
+                        temperature=self.temperature,
+                        top_p=self.top_p,
+                        stream=False,
+                        **self.kwargs,
+                    )
+    
+            return re.sub(
+                r"```(?:markdown)?\n(.*?)\n```",
+                r"\1",
+                response.choices[0].message.content,
+                flags=re.DOTALL,
+            )
+        except Exception as e:
+            raise LLMError(f"OpenAI Model processing failed: {str(e)}")
 
     @retry(
         reraise=True,
