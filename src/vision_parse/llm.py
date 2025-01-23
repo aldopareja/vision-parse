@@ -473,26 +473,15 @@ class LLM:
 
             if self.enable_concurrency:
                 if structured:
-                    if os.getenv("AZURE_OPENAI_API_KEY") or self.provider == "deepseek":
-                        response = await self.aclient.chat.completions.create(
-                            model=self.model_name,
-                            messages=messages,
-                            temperature=0.0,
-                            top_p=0.4,
-                            response_format={"type": "json_object"},
-                            stream=False,
-                            **self.kwargs,
-                        )
-                    else:
-                        response = await self.aclient.beta.chat.completions.parse(
-                            model=self.model_name,
-                            response_format=ImageDescription,
-                            messages=messages,
-                            temperature=0.0,
-                            top_p=0.4,
-                            stream=False,
-                            **self.kwargs,
-                        )
+                    response = await self.aclient.chat.completions.create(
+                        model=self.model_name,
+                        messages=messages,
+                        temperature=0.0,
+                        top_p=0.4,
+                        response_format={"type": "json_object"},
+                        stream=False,
+                        **self.kwargs,
+                    )
                     return response.choices[0].message.content
 
                 response = await self.aclient.chat.completions.create(
@@ -505,26 +494,15 @@ class LLM:
                 )
             else:
                 if structured:
-                    if os.getenv("AZURE_OPENAI_API_KEY") or self.provider == "deepseek":
-                        response = self.client.chat.completions.create(
-                            model=self.model_name,
-                            messages=messages,
-                            temperature=0.0,
-                            top_p=0.4,
-                            response_format={"type": "json_object"},
-                            stream=False,
-                            **self.kwargs,
-                        )
-                    else:
-                        response = self.client.beta.chat.completions.parse(
-                            model=self.model_name,
-                            response_format=ImageDescription,
-                            messages=messages,
-                            temperature=0.0,
-                            top_p=0.4,
-                            stream=False,
-                            **self.kwargs,
-                        )
+                    response = self.client.chat.completions.create(
+                        model=self.model_name,
+                        messages=messages,
+                        temperature=0.0,
+                        top_p=0.4,
+                        response_format={"type": "json_object"},
+                        stream=False,
+                        **self.kwargs,
+                    )
                     return response.choices[0].message.content
 
                 response = self.client.chat.completions.create(
