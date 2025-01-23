@@ -14,67 +14,6 @@ class ImageExtractionError(BaseException):
     """Custom exception for handling Image Extraction errors."""
 
     pass
-
-def parse_analysis_response(response: str) -> ImageDescription:
-    """Parse the structured response from the vision model.
-    
-    Args:
-        response: The structured response string containing XML-style tags
-        
-    Returns:
-        ImageDescription object containing the parsed data
-    
-    Raises:
-        LLMError: If response cannot be properly parsed
-    """
-    try:
-        # First verify we have complete analysis section
-        if not ("<ANALYSIS_START>" in response and "<ANALYSIS_END>" in response):
-            raise LLMError("Response missing analysis section markers")
-
-        # Extract content between tags using regex with error handling
-        def get_tag_content(tag: str, default: str = "No") -> str:
-            pattern = f"<{tag}>(.*?)</{tag}>"
-            match = re.search(pattern, response, re.DOTALL)
-            if not match:
-                logger.warning(f"Tag {tag} not found in response")
-                return default
-            return match.group(1).strip()
-
-        # Parse presence indicators (defaulting to "No")
-        text_detected = get_tag_content("TEXT_PRESENCE")
-        tables_detected = get_tag_content("TABLE_PRESENCE") 
-        images_detected = get_tag_content("IMAGE_PRESENCE")
-        latex_detected = get_tag_content("LATEX_PRESENCE")
-
-        # Parse confidence (defaulting to 0.0)
-        confidence_str = get_tag_content("CONFIDENCE", "0.0")
-        try:
-            confidence = float(confidence_str)
-            if not 0.0 <= confidence <= 1.0:
-                logger.warning("Confidence score out of range, defaulting to 0.0")
-                confidence = 0.0
-        except ValueError:
-            logger.warning("Invalid confidence value, defaulting to 0.0")
-            confidence = 0.0
-
-        # Extract content between content tags
-        content_pattern = r"<EXTRACTED_CONTENT_START>(.*?)<EXTRACTED_CONTENT_END>"
-        content_match = re.search(content_pattern, response, re.DOTALL)
-        extracted_text = content_match.group(1).strip() if content_match else ""
-
-        # Validate and return as ImageDescription
-        return ImageDescription(
-            text_detected=text_detected,
-            tables_detected=tables_detected,
-            images_detected=images_detected,
-            latex_equations_detected=latex_detected,
-            confidence_score_text=confidence,
-            extracted_text=extracted_text
-        )
-
-    except Exception as e:
-        raise LLMError(f"Failed to parse analysis response: {str(e)}")
     
 @dataclass
 class ImageData:
