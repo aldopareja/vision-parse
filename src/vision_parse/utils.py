@@ -15,7 +15,46 @@ class ImageExtractionError(BaseException):
 
     pass
 
-
+def parse_analysis_response(response: str) -> dict:
+    structured_data = {
+        'text_detected': 'No',
+        'tables_detected': 'No',
+        'images_detected': 'No',
+        'latex_equations_detected': 'No',
+        'confidence_score_text': 0.0,
+        'extracted_text': ''
+    }
+    
+    # Extract content between tags using regex
+    def get_tag_content(tag: str) -> str:
+        pattern = f"<{tag}>(.*?)</{tag}>"
+        match = re.search(pattern, response, re.DOTALL)
+        return match.group(1).strip() if match else ""
+    
+    # Only process if we find the analysis section
+    if "<ANALYSIS_START>" in response and "<ANALYSIS_END>" in response:
+        structured_data['text_detected'] = get_tag_content("TEXT_PRESENCE")
+        structured_data['tables_detected'] = get_tag_content("TABLE_PRESENCE")
+        structured_data['images_detected'] = get_tag_content("IMAGE_PRESENCE")
+        structured_data['latex_equations_detected'] = get_tag_content("LATEX_PRESENCE")
+        
+        confidence = get_tag_content("CONFIDENCE")
+        try:
+            structured_data['confidence_score_text'] = float(confidence)
+        except (ValueError, TypeError):
+            structured_data['confidence_score_text'] = 0.0
+            
+        # Extract content between content tags
+        extracted_content = re.search(
+            r"<EXTRACTED_CONTENT_START>(.*?)<EXTRACTED_CONTENT_END>",
+            response,
+            re.DOTALL
+        )
+        if extracted_content:
+            structured_data['extracted_text'] = extracted_content.group(1).strip()
+    
+    return structured_data
+    
 @dataclass
 class ImageData:
     image_url: str  # URL path for extracted images
