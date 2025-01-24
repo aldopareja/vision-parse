@@ -305,8 +305,8 @@ class LLM:
                         import httpx
                         self.aclient = openai.AsyncOpenAI(
                             limits=httpx.Limits(
-                                    max_connections=1000,
-                                    max_keepalive_connections=100
+                                    max_connections=4,
+                                    max_keepalive_connections=4
                                 ),
                             api_key=self.api_key,
                             base_url=(
