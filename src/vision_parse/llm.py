@@ -317,51 +317,57 @@ class LLM:
         """Generate markdown formatted text from a base64-encoded image using appropriate model provider."""
         extracted_images = []
         if self.detailed_extraction:
-            try:
-                response = await self._get_response(
-                    base64_encoded,
-                    self._image_analysis_prompt.render(),
-                    structured=True,
+            # try:
+                
+            # Get initial structured analysis
+            analysis_response = await self._get_response(
+                base64_encoded,
+                self._image_analysis_prompt.render(),
+                structured=True
+            )
+
+            image_desc = parse_analysis_response(analysis_response)
+    
+            # Early return if no text detected
+            if image_desc.text_detected.strip() == "No":
+                return ""
+    
+            # For Ollama with high confidence and simple content, return directly
+            if (
+                self.provider == "ollama"
+                and image_desc.confidence_score_text > 0.6
+                and image_desc.tables_detected.strip() == "No"
+                and image_desc.latex_equations_detected.strip() == "No"
+                and (
+                    image_desc.images_detected.strip() == "No"
+                    or self.image_mode is None
                 )
-
-                json_response = ImageDescription.model_validate_json(response)
-
-                if json_response.text_detected.strip() == "No":
-                    return ""
-
-                if (
-                    self.provider == "ollama"
-                    and float(json_response.confidence_score_text) > 0.6
-                    and json_response.tables_detected.strip() == "No"
-                    and json_response.latex_equations_detected.strip() == "No"
-                    and (
-                        json_response.images_detected.strip() == "No"
-                        or self.image_mode is None
-                    )
-                ):
-                    return json_response.extracted_text
-
-                if (
-                    json_response.images_detected.strip() == "Yes"
-                    and self.image_mode is not None
-                ):
-                    extracted_images = ImageData.extract_images(
-                        pix, self.image_mode, page_number
-                    )
-
-                prompt = self._md_prompt_template.render(
-                    extracted_text=json_response.extracted_text,
-                    tables_detected=json_response.tables_detected,
-                    latex_equations_detected=json_response.latex_equations_detected,
-                    confidence_score_text=float(json_response.confidence_score_text),
-                    custom_prompt=self.custom_prompt,
+            ):
+                return image_desc.extracted_text
+    
+            # Extract images if needed
+            if (
+                image_desc.images_detected.strip() == "Yes"
+                and self.image_mode is not None
+            ):
+                extracted_images = ImageData.extract_images(
+                    pix, self.image_mode, page_number
                 )
+    
+            # Render markdown prompt with analysis results
+            prompt = self._md_prompt_template.render(
+                extracted_text=image_desc.extracted_text,
+                tables_detected=image_desc.tables_detected,
+                latex_equations_detected=image_desc.latex_equations_detected,
+                confidence_score_text=image_desc.confidence_score_text,
+                custom_prompt=self.custom_prompt,
+            )
 
-            except Exception:
-                logger.warning(
-                    "Detailed extraction failed. Falling back to simple extraction."
-                )
-                self.detailed_extraction = False
+            # except Exception:
+            #     logger.warning(
+            #         "Detailed extraction failed. Falling back to simple extraction."
+            #     )
+            #     self.detailed_extraction = False
 
         if not self.detailed_extraction:
             prompt = self._md_prompt_template.render(
