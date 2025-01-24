@@ -1,4 +1,4 @@
-from typing import Literal, Dict, Any, Union
+from typing import List, Literal, Dict, Any, Union, Optional
 from pydantic import BaseModel
 from jinja2 import Template
 import re
@@ -34,78 +34,20 @@ class LLMError(BaseException):
     """Custom exception for Vision LLM errors"""
 
     pass
-
-def parse_analysis_response(response: str) -> ImageDescription:
-    """Parse the structured response from the vision model.
-    
-    Args:
-        response: The structured response string containing XML-style tags
-        
-    Returns:
-        ImageDescription object containing the parsed data
-    
-    Raises:
-        LLMError: If response cannot be properly parsed
-    """
-    try:
-        # First verify we have complete analysis section
-        if not ("<ANALYSIS_START>" in response and "<ANALYSIS_END>" in response):
-            raise LLMError("Response missing analysis section markers")
-
-        # Extract content between tags using regex with error handling
-        def get_tag_content(tag: str, default: str = "No") -> str:
-            pattern = f"<{tag}>(.*?)</{tag}>"
-            match = re.search(pattern, response, re.DOTALL)
-            if not match:
-                logger.warning(f"Tag {tag} not found in response")
-                return default
-            return match.group(1).strip()
-
-        # Parse presence indicators (defaulting to "No")
-        text_detected = get_tag_content("TEXT_PRESENCE")
-        tables_detected = get_tag_content("TABLE_PRESENCE") 
-        images_detected = get_tag_content("IMAGE_PRESENCE")
-        latex_detected = get_tag_content("LATEX_PRESENCE")
-
-        # Parse confidence (defaulting to 0.0)
-        confidence_str = get_tag_content("CONFIDENCE", "0.0")
-        try:
-            confidence = float(confidence_str)
-            if not 0.0 <= confidence <= 1.0:
-                logger.warning("Confidence score out of range, defaulting to 0.0")
-                confidence = 0.0
-        except ValueError:
-            logger.warning("Invalid confidence value, defaulting to 0.0")
-            confidence = 0.0
-
-        # Extract content between content tags
-        content_pattern = r"<EXTRACTED_CONTENT_START>(.*?)<EXTRACTED_CONTENT_END>"
-        content_match = re.search(content_pattern, response, re.DOTALL)
-        extracted_text = content_match.group(1).strip() if content_match else ""
-
-        # Validate and return as ImageDescription
-        return ImageDescription(
-            text_detected=text_detected,
-            tables_detected=tables_detected,
-            images_detected=images_detected,
-            latex_equations_detected=latex_detected,
-            confidence_score_text=confidence,
-            extracted_text=extracted_text
-        )
-
-    except Exception as e:
-        raise LLMError(f"Failed to parse analysis response: {str(e)}")
         
 class LLM:
     # Load prompts at class level
     try:
         from importlib.resources import files
 
-        _image_analysis_prompt = Template(
+        _first_pass_prompt = Template(
             files("vision_parse").joinpath("image_analysis.j2").read_text()
         )
         _md_prompt_template = Template(
             files("vision_parse").joinpath("markdown_prompt.j2").read_text()
+        )
+        _refinement_prompt = Template(
+            files("vision_parse").joinpath("refinement_prompt.j2").read_text()
         )
     except Exception as e:
         raise FileNotFoundError(f"Failed to load prompt files: {str(e)}")
@@ -113,34 +55,46 @@ class LLM:
     def __init__(
         self,
         model_name: str,
-        api_key: Union[str, None],
-        temperature: float,
-        top_p: float,
-        ollama_config: Union[Dict, None],
-        openai_config: Union[Dict, None],
-        gemini_config: Union[Dict, None],
-        image_mode: Literal["url", "base64", None],
-        custom_prompt: Union[str, None],
-        detailed_extraction: bool,
-        enable_concurrency: bool,
-        device: Literal["cuda", "mps", None],
-        num_workers: int,
+        api_key: Optional[str] = None,
+        temperature: float = 0.7,
+        top_p: float = 0.7,
+        openai_config: Optional[Dict] = None,
+        custom_prompt: Optional[str] = None,
+        enable_concurrency: bool = False,
+        device: Optional[Literal["cuda", "mps"]] = None,
+        num_workers: int = 1,
         **kwargs: Any,
     ):
+        """Initialize LLM with configuration.
+        
+        Args:
+            model_name: Name of the model to use
+            api_key: API key for the model provider
+            temperature: Temperature for text generation
+            top_p: Top p for text generation
+            openai_config: Configuration for OpenAI API
+            custom_prompt: Custom prompt to use
+            enable_concurrency: Whether to enable concurrent processing
+            device: Device to use for processing
+            num_workers: Number of workers for concurrent processing
+            **kwargs: Additional arguments to pass to the model
+        """
         self.model_name = model_name
         self.api_key = api_key
-        self.ollama_config = ollama_config or {}
         self.openai_config = openai_config or {}
-        self.gemini_config = gemini_config or {}
         self.temperature = temperature
         self.top_p = top_p
-        self.image_mode = image_mode
         self.custom_prompt = custom_prompt
-        self.detailed_extraction = detailed_extraction
-        self.kwargs = kwargs
         self.enable_concurrency = enable_concurrency
         self.device = device
         self.num_workers = num_workers
+        self.kwargs = kwargs
+        
+        # Set default configs
+        self.ollama_config = kwargs.get('ollama_config', {})
+        self.gemini_config = kwargs.get('gemini_config', {})
+        self.image_mode = kwargs.get('image_mode')
+        self.detailed_extraction = kwargs.get('detailed_extraction', True)
 
         self.provider = self._get_provider_name(model_name)
         self._init_llm()
@@ -305,8 +259,8 @@ class LLM:
                         import httpx
                         http_client = httpx.AsyncClient(
                                 limits=httpx.Limits(
-                                    max_connections=4,
-                                    max_keepalive_connections=4
+                                    max_connections=100,
+                                    max_keepalive_connections=100,
                                 )
                             )
                         self.aclient = openai.AsyncOpenAI(
@@ -370,99 +324,70 @@ class LLM:
             )
 
     async def _get_response(
-        self, base64_encoded: str, prompt: str, structured: bool = False
-    ):
+        self, base64_encoded: str, prompt_or_messages: Union[str, List[Dict]], structured: bool = False, is_refinement: bool = False
+    ) -> Any:
+        """Get response from the model."""
         if self.provider == "ollama":
-            return await self._ollama(base64_encoded, prompt, structured)
+            return await self._ollama(base64_encoded, prompt_or_messages, structured, is_refinement)
         elif self.provider == "openai":
-            return await self._openai(base64_encoded, prompt, structured)
+            return await self._openai(base64_encoded, prompt_or_messages, structured, is_refinement)
         elif self.provider == "gemini":
-            return await self._gemini(base64_encoded, prompt, structured)
+            return await self._gemini(base64_encoded, prompt_or_messages, structured, is_refinement)
 
     async def generate_markdown(
         self, base64_encoded: str, pix: fitz.Pixmap, page_number: int
     ) -> Any:
         """Generate markdown formatted text from a base64-encoded image using appropriate model provider."""
-        extracted_images = []
-        if self.detailed_extraction:
-            # try:
-            # Get initial structured analysis
-            analysis_response = await self._get_response(
-                base64_encoded,
-                self._image_analysis_prompt.render(),
-                structured=True
-            )
-            
-            # CHANGE HERE: Replace JSON parsing with new parser
-            # Old: json_response = json.loads(analysis_response)
-            # New: Use the new parser
-            image_desc = parse_analysis_response(analysis_response)
-    
-            # Early return if no text detected
-            if image_desc.text_detected.strip() == "No":
-                return ""
-    
-            # For Ollama with high confidence and simple content, return directly
-            if (
-                self.provider == "ollama"
-                and image_desc.confidence_score_text > 0.6
-                and image_desc.tables_detected.strip() == "No"
-                and image_desc.latex_equations_detected.strip() == "No"
-                and (
-                    image_desc.images_detected.strip() == "No"
-                    or self.image_mode is None
-                )
-            ):
-                return image_desc.extracted_text
-    
-            # Extract images if needed
-            if (
-                image_desc.images_detected.strip() == "Yes"
-                and self.image_mode is not None
-            ):
-                extracted_images = ImageData.extract_images(
-                    pix, self.image_mode, page_number
-                )
-    
-            # Render markdown prompt with analysis results
-            prompt = self._md_prompt_template.render(
-                extracted_text=image_desc.extracted_text,
-                tables_detected=image_desc.tables_detected,
-                latex_equations_detected=image_desc.latex_equations_detected,
-                confidence_score_text=image_desc.confidence_score_text,
-                custom_prompt=self.custom_prompt,
-            )
-
-            # except Exception:
-            #     logger.warning(
-            #         "Detailed extraction failed. Falling back to simple extraction."
-            #     )
-            #     self.detailed_extraction = False
-
-        if not self.detailed_extraction:
-            prompt = self._md_prompt_template.render(
-                extracted_text="",
-                tables_detected="Yes",
-                latex_equations_detected="No",
-                confidence_score_text=0.0,
-                custom_prompt=self.custom_prompt,
-            )
-
-        markdown_content = await self._get_response(
-            base64_encoded, prompt, structured=False
+        # First pass - Initial extraction
+        first_pass_prompt = self._first_pass_prompt.render(
+            custom_prompt=self.custom_prompt
+        )
+        first_pass_result = await self._get_response(
+            base64_encoded,
+            first_pass_prompt,
+            structured=False
         )
 
-        if extracted_images:
-            if self.image_mode == "url":
-                for image_data in extracted_images:
-                    markdown_content += (
-                        f"\n\n![{image_data.image_url}]({image_data.image_url})"
-                    )
-            elif self.image_mode == "base64":
-                for image_data in extracted_images:
-                    markdown_content += (
-                        f"\n\n![{image_data.image_url}]({image_data.base64_encoded})"
-                    )
+        # Second pass - Refinement
+        refinement_prompt = self._refinement_prompt.render(
+            custom_prompt=self.custom_prompt
+        )
+        
+        # Add the first pass result to the messages for the second pass
+        if self.provider == "ollama":
+            messages = [
+                {
+                    "role": "user",
+                    "content": f"{refinement_prompt}\n\nPreviously extracted text:\n{first_pass_result}",
+                    "images": [base64_encoded],
+                }
+            ]
+        else:  # openai, gemini, etc.
+            messages = [
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": f"{refinement_prompt}\n\nPreviously extracted text:\n{first_pass_result}"
+                        },
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:image/png;base64,{base64_encoded}"
+                            },
+                        },
+                    ],
+                }
+            ]
+
+        # Second pass with refinement
+        markdown_content = await self._get_response(
+            base64_encoded,
+            messages,
+            structured=False,
+            is_refinement=True  # New parameter to handle refinement pass
+        )
 
         return markdown_content
 
@@ -528,66 +453,48 @@ class LLM:
         wait=wait_exponential(multiplier=1, min=4, max=10),
     )
     async def _openai(
-        self, base64_encoded: str, prompt: str, structured: bool = False
+        self, base64_encoded: str, prompt_or_messages: Union[str, List[Dict]], structured: bool = False, is_refinement: bool = False
     ) -> Any:
         """Process base64-encoded image through OpenAI vision models."""
         try:
-            messages = [
-                {
-                    "role": "user", 
-                    "content": [
-                        {"type": "text", "text": prompt},
-                        {
-                            "type": "image_url",
-                            "image_url": {
-                                "url": f"data:image/png;base64,{base64_encoded}"
+            # If prompt_or_messages is a string, construct the messages
+            if isinstance(prompt_or_messages, str):
+                messages = [
+                    {
+                        "role": "user",
+                        "content": [
+                            {"type": "text", "text": prompt_or_messages},
+                            {
+                                "type": "image_url",
+                                "image_url": {
+                                    "url": f"data:image/png;base64,{base64_encoded}"
+                                },
                             },
-                        },
-                    ],
-                }
-            ]
-    
-            if self.enable_concurrency:
-                if structured:
-                    # Remove JSON formatting but keep structured prompt
-                    response = await self.aclient.chat.completions.create(
-                        model=self.model_name,
-                        messages=messages,
-                        temperature=0.0,
-                        top_p=0.4,
-                        stream=False,
-                        **self.kwargs,
-                    )
-                else:
-                    response = await self.aclient.chat.completions.create(
-                        model=self.model_name,
-                        messages=messages,
-                        temperature=self.temperature,
-                        top_p=self.top_p,
-                        stream=False,
-                        **self.kwargs,
-                    )
+                        ],
+                    }
+                ]
             else:
-                if structured:
-                    # Remove JSON formatting but keep structured prompt
-                    response = self.client.chat.completions.create(
-                        model=self.model_name,
-                        messages=messages,
-                        temperature=0.0,
-                        top_p=0.4,
-                        stream=False,
-                        **self.kwargs,
-                    )
-                else:
-                    response = self.client.chat.completions.create(
-                        model=self.model_name,
-                        messages=messages,
-                        temperature=self.temperature,
-                        top_p=self.top_p,
-                        stream=False,
-                        **self.kwargs,
-                    )
-    
+                messages = prompt_or_messages
+
+            if self.enable_concurrency:
+                response = await self.aclient.chat.completions.create(
+                    model=self.model_name,
+                    messages=messages,
+                    temperature=0.1 if is_refinement else self.temperature,
+                    top_p= self.top_p,
+                    stream=False,
+                    **self.kwargs,
+                )
+            else:
+                response = self.client.chat.completions.create(
+                    model=self.model_name,
+                    messages=messages,
+                    temperature=0.1 if is_refinement else self.temperature,
+                    top_p= self.top_p,
+                    stream=False,
+                    **self.kwargs,
+                )
+
             return re.sub(
                 r"```(?:markdown)?\n(.*?)\n```",
                 r"\1",

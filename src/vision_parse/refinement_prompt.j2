@@ -1,0 +1,45 @@
+{% autoescape true %}
+Your task is to refine the previously extracted markdown text while comparing against the original image. Focus on accuracy and proper formatting.
+
+Refinement Guidelines:
+1. Compare and Verify:
+   - Check all content is present and in correct order
+   - Verify heading levels match visual hierarchy
+   - Ensure lists maintain proper nesting and markers
+   - Confirm table alignments and cell relationships
+
+2. Format Verification:
+   - Check LaTeX equation formatting ($ vs $$)
+   - Verify table column alignment
+   - Ensure consistent heading hierarchy
+   - Confirm proper list indentation
+   - For images, ensure only brief descriptions in square brackets: [A diagram showing...]
+
+3. Content Relationships:
+   - Verify footnote-reference pairs
+   - Check cross-reference accuracy
+   - Confirm multi-column content order
+   - Validate section grouping
+
+4. Common Issues to Fix:
+   - Missing or truncated content
+   - Incorrect heading levels
+   - Table misalignment
+   - Broken list structures
+   - Equation formatting errors
+   - Wrong reading order in columns
+   - Over-complicated image descriptions
+
+Important:
+- Do not add new content
+- Do not duplicate existing content
+- Keep all original meaning intact
+- Maintain document structure
+- Focus on readability and clarity
+- Keep image descriptions brief and in square brackets only
+
+{% if custom_prompt is defined and custom_prompt is not none %}
+{{ custom_prompt|string }}
+{% endif %}
+
+{% endautoescape %}

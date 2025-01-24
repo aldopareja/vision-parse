@@ -46,13 +46,8 @@ class VisionParser:
         api_key: Optional[str] = None,
         temperature: float = 0.7,
         top_p: float = 0.7,
-        ollama_config: Optional[Dict] = None,
         openai_config: Optional[Dict] = None,
-        gemini_config: Optional[Dict] = None,
-        image_mode: Literal["url", "base64", None] = None,
         custom_prompt: Optional[str] = None,
-        detailed_extraction: bool = False,
-        extraction_complexity: bool = False,  # Deprecated Parameter
         enable_concurrency: bool = False,
         **kwargs: Any,
     ):
@@ -61,29 +56,12 @@ class VisionParser:
         self.device, self.num_workers = get_device_config()
         self.enable_concurrency = enable_concurrency
 
-        if extraction_complexity:
-            if not detailed_extraction:
-                detailed_extraction = True
-                warnings.warn(
-                    "`extraction_complexity` is deprecated, and was renamed to `detailed_extraction`.",
-                    DeprecationWarning,
-                )
-
-            else:
-                raise ValueError(
-                    "`extraction_complexity` is deprecated, and was renamed to `detailed_extraction`. Please use `detailed_extraction` instead."
-                )
-
         self.llm = LLM(
             model_name=model_name,
             api_key=api_key,
             temperature=temperature,
             top_p=top_p,
-            ollama_config=ollama_config,
             openai_config=openai_config,
-            gemini_config=gemini_config,
-            image_mode=image_mode,
-            detailed_extraction=detailed_extraction,
             custom_prompt=custom_prompt,
             enable_concurrency=enable_concurrency,
             device=self.device,

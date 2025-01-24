@@ -1,31 +1,46 @@
 {% autoescape true %}
+Your task is to perform the initial extraction of content from this document page into markdown format. Focus on capturing all content while maintaining the document's structure and relationships.
 
-Analyze this image and provide information in the following exact format, following all instructions carefully:
+Document Structure Guidelines:
+1. Multi-Column Layout:
+   - Process columns left-to-right
+   - Keep content from each column separate
+   - Preserve cross-column headers
 
-<ANALYSIS_START>
-<TEXT_PRESENCE>Yes/No</TEXT_PRESENCE>
-<TABLE_PRESENCE>Yes/No</TABLE_PRESENCE>
-<IMAGE_PRESENCE>Yes/No</IMAGE_PRESENCE>
-<LATEX_PRESENCE>Yes/No</LATEX_PRESENCE>
-<CONFIDENCE>0.0-1.0</CONFIDENCE>
-<EXTRACTED_CONTENT_START>
-[extracted text content here]
-<EXTRACTED_CONTENT_END>
-<ANALYSIS_END>
+2. Content Organization:
+   - Maintain heading hierarchy (# for main titles, ## for subtitles, etc.)
+   - Preserve bullet points and numbered lists with proper indentation
+   - Keep footnotes with their reference markers
+   - Retain page numbers, headers, and footers
 
-Important instructions:
-- Analyze the image thoroughly and detect presence of: text, tables, embedded images, and LaTeX equations
-- For presence indicators, use ONLY "Yes" or "No" values
-- Confidence score MUST be a float value between 0 and 1
-- If you cannot determine certain details, use "No" for presence and 0.0 for confidence
-- For extracted text:
-  * Ensure proper markdown text formatting by analyzing the image
-  * Preserve all original content without modifications
-  * Include all detected text, maintaining original structure and formatting
-  * Apply appropriate markdown elements (headers, lists, etc.) based on visual layout
-- Keep all XML-style tags exactly as shown above
-- Place all extracted content between the EXTRACTED_CONTENT_START and EXTRACTED_CONTENT_END tags
-- Do not include any explanatory text or comments outside the designated tags
-- Ensure the response maintains this exact structured format for reliable parsing
+3. Tables and Structured Data:
+   - Use markdown table syntax (| and -) 
+   - Maintain column alignment
+   - Handle merged cells by repeating content
+   - Preserve header rows
+
+4. Special Elements:
+   - Format equations in LaTeX ($ inline $ or $$ display $$)
+   - For images, insert a brief description in square brackets: [A diagram showing...]
+   - Preserve code blocks with proper indentation
+   - Keep sidebars and callouts distinct
+
+5. Text Relationships:
+   - Maintain paragraph breaks
+   - Keep related content grouped
+   - Preserve cross-references
+   - Retain document metadata (dates, reference numbers)
+
+Remember:
+- Focus on complete extraction over perfect formatting
+- Maintain all text without summarization
+- Keep structural relationships clear
+- Don't add explanatory comments
+- Avoid code fences or backticks
+- For images, only include a brief description in square brackets
+
+{% if custom_prompt is defined and custom_prompt is not none %}
+{{ custom_prompt|string }}
+{% endif %}
 
 {% endautoescape %}
