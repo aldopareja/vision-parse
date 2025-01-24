@@ -1,46 +1,42 @@
 {% autoescape true %}
-Your task is to perform the initial extraction of content from this document page into markdown format. Focus on capturing all content while maintaining the document's structure and relationships.
+Analyze this document page and convert it to markdown format. Your response should have two parts:
 
-Document Structure Guidelines:
-1. Multi-Column Layout:
-   - Process columns left-to-right
-   - Keep content from each column separate
-   - Preserve cross-column headers
+1. First, provide your analysis in <thinking> tags:
+   - Summarize what you see on the page
+   - Note the key structural elements (columns, headers, lists, etc.)
+   - Outline your approach for accurate transcription
+   - Identify any challenging elements that need special attention
 
-2. Content Organization:
-   - Maintain heading hierarchy (# for main titles, ## for subtitles, etc.)
-   - Preserve bullet points and numbered lists with proper indentation
-   - Keep footnotes with their reference markers
-   - Retain page numbers, headers, and footers
+2. Then, provide the markdown transcription in <markdown> tags, following these guidelines:
 
-3. Tables and Structured Data:
-   - Use markdown table syntax (| and -) 
-   - Maintain column alignment
-   - Handle merged cells by repeating content
-   - Preserve header rows
-
-4. Special Elements:
-   - Format equations in LaTeX ($ inline $ or $$ display $$)
-   - For images, insert a brief description in square brackets: [A diagram showing...]
-   - Preserve code blocks with proper indentation
-   - Keep sidebars and callouts distinct
-
-5. Text Relationships:
-   - Maintain paragraph breaks
-   - Keep related content grouped
-   - Preserve cross-references
-   - Retain document metadata (dates, reference numbers)
+Content Guidelines:
+- Process columns left-to-right
+- Maintain heading hierarchy (# ## ###)
+- Preserve lists and indentation
+- Format tables with | and -
+- Use LaTeX for equations ($ inline $ or $$ display $$)
+- Use [brief description] for images
+- Keep footnotes and references intact
+- Preserve document metadata
 
 Remember:
-- Focus on complete extraction over perfect formatting
-- Maintain all text without summarization
-- Keep structural relationships clear
+- Extract all content without summarization
+- Maintain structural relationships
 - Don't add explanatory comments
 - Avoid code fences or backticks
-- For images, only include a brief description in square brackets
+- Keep image descriptions brief
 
 {% if custom_prompt is defined and custom_prompt is not none %}
 {{ custom_prompt|string }}
 {% endif %}
+
+Format your response as:
+<thinking>
+Your analysis and approach here
+</thinking>
+
+<markdown>
+Your complete markdown transcription here
+</markdown>
 
 {% endautoescape %}

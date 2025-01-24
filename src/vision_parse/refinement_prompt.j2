@@ -1,45 +1,43 @@
 {% autoescape true %}
-Your task is to refine the previously extracted markdown text while comparing against the original image. Focus on accuracy and proper formatting.
+Review and refine the previously extracted markdown while comparing against the original image. Your response should have two parts:
 
-Refinement Guidelines:
-1. Compare and Verify:
-   - Check all content is present and in correct order
-   - Verify heading levels match visual hierarchy
-   - Ensure lists maintain proper nesting and markers
-   - Confirm table alignments and cell relationships
+1. First, provide your analysis in <thinking> tags:
+   - Assess the accuracy of the previous extraction
+   - Identify any formatting or structural issues
+   - List specific elements that need improvement
+   - Outline your refinement approach
 
-2. Format Verification:
-   - Check LaTeX equation formatting ($ vs $$)
-   - Verify table column alignment
-   - Ensure consistent heading hierarchy
-   - Confirm proper list indentation
-   - For images, ensure only brief descriptions in square brackets: [A diagram showing...]
+2. Then, provide the refined markdown in <markdown> tags, following these guidelines:
 
-3. Content Relationships:
-   - Verify footnote-reference pairs
-   - Check cross-reference accuracy
-   - Confirm multi-column content order
-   - Validate section grouping
-
-4. Common Issues to Fix:
-   - Missing or truncated content
-   - Incorrect heading levels
-   - Table misalignment
-   - Broken list structures
-   - Equation formatting errors
-   - Wrong reading order in columns
-   - Over-complicated image descriptions
+Refinement Focus Areas:
+- Content completeness and accuracy
+- Heading level hierarchy
+- List structure and nesting
+- Table formatting and alignment
+- Equation formatting ($ vs $$)
+- Image description brevity
+- Footnote and reference pairs
+- Multi-column content order
 
 Important:
-- Do not add new content
-- Do not duplicate existing content
-- Keep all original meaning intact
+- Don't add new content
+- Don't duplicate existing content
+- Keep original meaning intact
 - Maintain document structure
-- Focus on readability and clarity
-- Keep image descriptions brief and in square brackets only
+- Focus on readability
+- Keep image descriptions brief
 
 {% if custom_prompt is defined and custom_prompt is not none %}
 {{ custom_prompt|string }}
 {% endif %}
+
+Format your response as:
+<thinking>
+Your analysis and refinement approach here
+</thinking>
+
+<markdown>
+Your refined markdown transcription here
+</markdown>
 
 {% endautoescape %}

@@ -457,6 +457,29 @@ class LLM:
         except Exception as e:
             raise LLMError(f"Ollama Model processing failed: {str(e)}")
 
+    def _extract_markdown_from_response(self, response_text: str) -> str:
+        """Extract markdown content from response with XML tags.
+        
+        Args:
+            response_text: Raw response text containing <thinking> and <markdown> tags
+            
+        Returns:
+            str: Extracted markdown content
+        """
+        # Remove any markdown code blocks first
+        response_text = re.sub(r'```(?:markdown)?\n(.*?)\n```', r'\1', response_text, flags=re.DOTALL)
+        
+        # Try to extract content between <markdown> tags
+        markdown_match = re.search(r'<markdown>(.*?)</markdown>', response_text, re.DOTALL)
+        if markdown_match:
+            return markdown_match.group(1).strip()
+            
+        # If no tags found, return the cleaned text
+        return response_text.strip()
+        
+        # If no tags found, return the original text
+        return response_text.strip()
+
     @retry(
         reraise=True,
         stop=stop_after_attempt(3),
@@ -491,7 +514,7 @@ class LLM:
                     model=self.model_name,
                     messages=messages,
                     temperature=0.1 if is_refinement else self.temperature,
-                    top_p= self.top_p,
+                    top_p=self.top_p,
                     stream=False,
                     **self.api_kwargs,
                 )
@@ -500,17 +523,13 @@ class LLM:
                     model=self.model_name,
                     messages=messages,
                     temperature=0.1 if is_refinement else self.temperature,
-                    top_p= self.top_p,
+                    top_p=self.top_p,
                     stream=False,
                     **self.api_kwargs,
                 )
 
-            return re.sub(
-                r"```(?:markdown)?\n(.*?)\n```",
-                r"\1",
-                response.choices[0].message.content,
-                flags=re.DOTALL,
-            )
+            # Extract markdown content from response
+            return self._extract_markdown_from_response(response.choices[0].message.content)
         except Exception as e:
             raise LLMError(f"OpenAI Model processing failed: {str(e)}")
 
