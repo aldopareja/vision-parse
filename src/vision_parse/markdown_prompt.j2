@@ -15,6 +15,7 @@ Your task is to analyze the given image (which is a page from a PDF) and extract
 {% if tables_detected is defined and tables_detected|string == "Yes" %}
 - If tables are detected, preserve the tabular structure in markdown format using | for columns and - for the header row separator.
 - Ensure that the cell values are properly aligned within the table columns and the tabular data is not distorted.
+- Make sure to include all the information in the table in a way that preserves the row/column relationships.
 - Maintain the original positioning of the table within the scanned document. Strictly do not include any additional explanations or comments.
 {% endif %}
 
