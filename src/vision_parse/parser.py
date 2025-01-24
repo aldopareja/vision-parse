@@ -55,6 +55,7 @@ class VisionParser:
         """Initialize parser with PDFPageConfig and LLM configuration."""
         self.page_config = page_config or PDFPageConfig()
         self.enable_concurrency = enable_concurrency
+        self.num_workers = num_workers
 
         self.llm = LLM(
             model_name=model_name,
