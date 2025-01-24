@@ -53,7 +53,6 @@ class VisionParser:
     ):
         """Initialize parser with PDFPageConfig and LLM configuration."""
         self.page_config = page_config or PDFPageConfig()
-        self.device, self.num_workers = get_device_config()
         self.enable_concurrency = enable_concurrency
 
         self.llm = LLM(
@@ -64,8 +63,6 @@ class VisionParser:
             openai_config=openai_config,
             custom_prompt=custom_prompt,
             enable_concurrency=enable_concurrency,
-            device=self.device,
-            num_workers=self.num_workers,
             **kwargs,
         )
 
@@ -166,3 +163,38 @@ class VisionParser:
             raise VisionParserError(
                 f"Failed to convert PDF file into markdown content: {str(e)}"
             )
+
+'''
+from vision_parse import VisionParser
+
+parser = VisionParser(
+    model_name="OpenGVLab/InternVL2_5-78B",
+    image_mode="url",
+    api_key="your-key",
+    detailed_extraction=False, # Set to True for more detailed extraction
+    enable_concurrency=True,
+    temperature=0.1,
+    top_p=1.0,
+    frequency_penalty=0.1,
+    max_tokens=4096,
+    openai_config={
+        "OPENAI_BASE_URL": "http://0.0.0.0:23333/v1",  # Specify your custom endpoint URL here
+        "OPENAI_MAX_RETRIES": 3,  # Optional: you can also configure other parameters
+        "OPENAI_TIMEOUT": 480.0    # Optional: default timeout is 240.0
+    },
+    num_workers=4,
+)
+
+# pdf_path = "/Users/aldo/Projects/BoA_poc/boa_docs/CashPro_Remote_Deposit_Admin_Guide.pdf"
+# pdf_path = "/root/CashPro_Remote_Deposit_Admin_Guide.pdf"
+pdf_path = "/root/CashPro_Remote_Deposit_Admin_Guide_28_33.pdf"
+# pdf_path = "./Rewards Money Market Savings .pdf"
+markdown_pages = parser.convert_pdf(pdf_path)
+# Concatenate all markdown pages and save to file
+output_path = pdf_path.replace('.pdf', '.md')
+with open(output_path, 'w') as f:
+    f.write('\n\n'.join(markdown_pages))
+print(f"Saved markdown to: {output_path}")
+
+from IPython import embed; embed()
+'''
