@@ -63,7 +63,11 @@ class LLM:
         enable_concurrency: bool = False,
         device: Optional[Literal["cuda", "mps"]] = None,
         num_workers: int = 1,
-        **kwargs: Any,
+        # Internal configuration parameters
+        image_mode: Optional[Literal["url", "base64"]] = None,
+        detailed_extraction: bool = True,
+        # API parameters
+        **api_kwargs: Any,
     ):
         """Initialize LLM with configuration.
         
@@ -77,7 +81,9 @@ class LLM:
             enable_concurrency: Whether to enable concurrent processing
             device: Device to use for processing
             num_workers: Number of workers for concurrent processing
-            **kwargs: Additional arguments to pass to the model
+            image_mode: Mode for extracting images
+            detailed_extraction: Whether to perform detailed extraction
+            **api_kwargs: Additional arguments to pass to the model
         """
         self.model_name = model_name
         self.api_key = api_key
@@ -88,13 +94,17 @@ class LLM:
         self.enable_concurrency = enable_concurrency
         self.device = device
         self.num_workers = num_workers
-        self.kwargs = kwargs
         
-        # Set default configs
-        self.ollama_config = kwargs.get('ollama_config', {})
-        self.gemini_config = kwargs.get('gemini_config', {})
-        self.image_mode = kwargs.get('image_mode')
-        self.detailed_extraction = kwargs.get('detailed_extraction', True)
+        # Internal configuration
+        self.image_mode = image_mode
+        self.detailed_extraction = detailed_extraction
+        
+        # API configuration
+        self.api_kwargs = api_kwargs
+        
+        # Provider-specific configs
+        self.ollama_config = api_kwargs.pop('ollama_config', {})
+        self.gemini_config = api_kwargs.pop('gemini_config', {})
 
         self.provider = self._get_provider_name(model_name)
         self._init_llm()
@@ -415,7 +425,7 @@ class LLM:
                     options={
                         "temperature": 0.0 if structured else self.temperature,
                         "top_p": 0.4 if structured else self.top_p,
-                        **self.kwargs,
+                        **self.api_kwargs,
                     },
                     keep_alive=-1,
                 )
@@ -433,7 +443,7 @@ class LLM:
                     options={
                         "temperature": 0.0 if structured else self.temperature,
                         "top_p": 0.4 if structured else self.top_p,
-                        **self.kwargs,
+                        **self.api_kwargs,
                     },
                     keep_alive=-1,
                 )
@@ -483,7 +493,7 @@ class LLM:
                     temperature=0.1 if is_refinement else self.temperature,
                     top_p= self.top_p,
                     stream=False,
-                    **self.kwargs,
+                    **self.api_kwargs,
                 )
             else:
                 response = self.client.chat.completions.create(
@@ -492,7 +502,7 @@ class LLM:
                     temperature=0.1 if is_refinement else self.temperature,
                     top_p= self.top_p,
                     stream=False,
-                    **self.kwargs,
+                    **self.api_kwargs,
                 )
 
             return re.sub(
@@ -522,7 +532,7 @@ class LLM:
                         response_schema=ImageDescription if structured else None,
                         temperature=0.0 if structured else self.temperature,
                         top_p=0.4 if structured else self.top_p,
-                        **self.kwargs,
+                        **self.api_kwargs,
                     ),
                 )
             else:
@@ -533,7 +543,7 @@ class LLM:
                         response_schema=ImageDescription if structured else None,
                         temperature=0.0 if structured else self.temperature,
                         top_p=0.4 if structured else self.top_p,
-                        **self.kwargs,
+                        **self.api_kwargs,
                     ),
                 )
 
