@@ -302,7 +302,12 @@ class LLM:
                     )
                 try:
                     if self.enable_concurrency:
+                        import httpx
                         self.aclient = openai.AsyncOpenAI(
+                            limits=httpx.Limits(
+                                    max_connections=1000,
+                                    max_keepalive_connections=100
+                                ),
                             api_key=self.api_key,
                             base_url=(
                                 self.openai_config.get("OPENAI_BASE_URL", None)
