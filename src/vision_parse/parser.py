@@ -49,6 +49,7 @@ class VisionParser:
         openai_config: Optional[Dict] = None,
         custom_prompt: Optional[str] = None,
         enable_concurrency: bool = False,
+        num_workers: int = 4,
         **kwargs: Any,
     ):
         """Initialize parser with PDFPageConfig and LLM configuration."""
