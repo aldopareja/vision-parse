@@ -11,4 +11,5 @@ SUPPORTED_MODELS: Dict[str, str] = {
     "gemini-2.0-flash-exp": "gemini",
     "gemini-1.5-pro": "gemini",
     "deepseek-chat": "deepseek",
+    "OpenGVLab/InternVL2_5-78B": "openai",
 }
