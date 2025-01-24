@@ -13,9 +13,9 @@ Your task is to analyze the given image (which is a page from a PDF) and extract
 {% endif %}
 
 {% if tables_detected is defined and tables_detected|string == "Yes" %}
-- If tables are detected in the PDF, convert them to **HTML** format using `<table>`, `<thead>`, `<tbody>`, `<tr>`, `<th>`, and `<td>` elements.
+- If tables are detected, preserve the tabular structure in markdown format using | for columns and - for the header row separator.
 - Ensure that the cell values are properly aligned within the table columns and the tabular data is not distorted.
-- Maintain the original table positioning as closely as possible to reflect the scanned document. Strictly do not include any additional explanations or comments.
+- Maintain the original positioning of the table within the scanned document. Strictly do not include any additional explanations or comments.
 {% endif %}
 
 {% if latex_equations_detected is defined and latex_equations_detected|string == "Yes" %}
