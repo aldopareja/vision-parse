@@ -2,30 +2,43 @@
 Review and refine the previously extracted markdown while comparing against the original image. Your response should have two parts:
 
 1. First, provide your analysis in <thinking> tags:
-   - Assess the accuracy of the previous extraction
-   - Identify any formatting or structural issues
-   - List specific elements that need improvement
-   - Outline your refinement approach
+   - Assess the accuracy and completeness of the previous extraction
+   - Identify any content truncation, corruption, or repetition issues
+   - Note any structural or formatting problems
+   - Check for missing or incomplete sections
+   - Verify table content integrity, especially for special characters and patterns
+   - Plan your refinement approach
 
 2. Then, provide the refined markdown in <markdown> tags, following these guidelines:
 
-Refinement Focus Areas:
-- Content completeness and accuracy
-- Heading level hierarchy
-- List structure and nesting
-- Table formatting and alignment
-- Equation formatting ($ vs $$)
-- Image description brevity
-- Footnote and reference pairs
-- Multi-column content order
+Content Integrity:
+- Check for and fix character repetition or truncation
+- Verify all tables are complete with proper column alignment
+- Ensure format patterns and special characters are properly escaped
+- Validate that multi-line content in tables is preserved
+- Confirm no sections are prematurely terminated
 
-Important:
-- Don't add new content
-- Don't duplicate existing content
-- Keep original meaning intact
-- Maintain document structure
+Structural Elements:
+- Maintain proper heading hierarchy
+- Preserve list structure and nesting
+- Keep table formatting consistent
+- Retain equation formatting ($ vs $$)
+- Keep footnotes and references paired
+- Preserve multi-column content order
+
+Quality Guidelines:
 - Focus on readability
-- Keep image descriptions brief
+- Keep image descriptions concise
+- Maintain original meaning and intent
+- Don't add new content beyond the source
+- Don't duplicate existing content
+- Preserve the document's original structure
+
+Error Recovery:
+- If encountering corrupted content, refer to the original image
+- For repeated characters, normalize to the correct pattern
+- For truncated sections, restore from the source material
+- When finding table formatting issues, rebuild while preserving content
 
 {% if custom_prompt is defined and custom_prompt is not none %}
 {{ custom_prompt|string }}
